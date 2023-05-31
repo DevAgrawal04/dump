@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.datasets import make_regression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
 from hyperopt import hp, fmin, tpe, Trials
 
 import tensorflow as tf
@@ -18,7 +19,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 space = {
     'n_layers': hp.choice('n_layers', [1, 2, 3]),
     'n_neurons': hp.choice('n_neurons', [16, 32, 64]),
-    'activation': hp.choice('activation', ['relu', 'sigmoid', 'tanh'])
+    'activation': hp.choice('activation', ['relu', 'sigmoid', 'tanh', 'linear']),
+    'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.1))
 }
 
 
@@ -35,14 +37,20 @@ def objective(params):
         model.add(Dense(params['n_neurons']))
         model.add(Activation(params['activation']))
     
-    # Add output layer
-    model.add(Dense(1))
+    # Add output layer with linear activation
+    model.add(Dense(1, activation='linear'))
     
-    # Compile the model
-    model.compile(optimizer='adam', loss='mean_squared_error')
+    # Compile the model with the specified learning rate
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']), loss='mean_squared_error')
     
     # Train the model
-    model.fit(X_train, y_train, epochs=10, verbose=0)
+    history = model.fit(X_train, y_train, epochs=10, verbose=0)
+    
+    # Plot loss vs epochs
+    plt.plot(history.history['loss'])
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.show()
     
     # Predict on the test set
     y_pred = model.predict(X_test)
@@ -58,4 +66,3 @@ trials = Trials()
 best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=10, trials=trials)
 
 print('Best hyperparameters:', best)
-    
