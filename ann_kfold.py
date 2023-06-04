@@ -10,10 +10,10 @@ X, y = generate_sample_data()
 # Define the objective function with cross-validation and loss plot
 def objective(params):
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Dense(params['units'], activation=params['activation'], input_dim=X.shape[1]))
+    model.add(tf.keras.layers.Dense(params['units'], activation='linear', input_dim=X.shape[1]))
     
-    for i in range(params['num_layers'] - 1):
-        model.add(tf.keras.layers.Dense(params['units'], activation=params['activation']))
+    for _ in range(params['num_layers'] - 1):
+        model.add(tf.keras.layers.Dense(params['units'], activation='linear'))
     
     model.add(tf.keras.layers.Dense(1))
     model.compile(optimizer=params['optimizer'], loss='mse')
@@ -42,7 +42,6 @@ def objective(params):
 # Define the search space for hyperparameters
 space = {
     'units': hp.choice('units', [16, 32, 64]),
-    'activation': hp.choice('activation', ['relu', 'sigmoid']),
     'optimizer': hp.choice('optimizer', ['adam', 'sgd']),
     'num_layers': hp.choice('num_layers', [1, 2, 3, 4])
 }
@@ -57,6 +56,12 @@ def optimize(space):
         trials=Trials(),
         rstate=np.random.RandomState(42)
     )
+    
+    # Convert the index values to actual parameter values
+    best['units'] = space['units'][best['units']]
+    best['optimizer'] = space['optimizer'][best['optimizer']]
+    best['num_layers'] = space['num_layers'][best['num_layers']]
+    
     return best
 
 # Run the optimization
