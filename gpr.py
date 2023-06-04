@@ -10,7 +10,11 @@ X, y = generate_sample_data()
 
 # Define the objective function with cross-validation
 def objective(params):
-    kernel = params['kernel'](length_scale=params['length_scale'])
+    if params['kernel']['type'] == 'rbf':
+        kernel = params['kernel']['kernel'](length_scale=params['kernel']['length_scale'])
+    elif params['kernel']['type'] == 'matern':
+        kernel = params['kernel']['kernel'](length_scale=params['kernel']['length_scale'], nu=params['kernel']['nu'])
+    
     model = GaussianProcessRegressor(kernel=kernel, alpha=params['alpha'])
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
     scores = -cross_val_score(model, X, y, cv=kf, scoring='neg_mean_squared_error')
