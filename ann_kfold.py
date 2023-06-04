@@ -11,7 +11,10 @@ X, y = generate_sample_data()
 def objective(params):
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Dense(params['units'], activation=params['activation'], input_dim=X.shape[1]))
-    model.add(tf.keras.layers.Dense(params['units'], activation=params['activation']))
+    
+    for i in range(params['num_layers'] - 1):
+        model.add(tf.keras.layers.Dense(params['units'], activation=params['activation']))
+    
     model.add(tf.keras.layers.Dense(1))
     model.compile(optimizer=params['optimizer'], loss='mse')
     
@@ -41,8 +44,7 @@ space = {
     'units': hp.choice('units', [16, 32, 64]),
     'activation': hp.choice('activation', ['relu', 'sigmoid']),
     'optimizer': hp.choice('optimizer', ['adam', 'sgd']),
-    'dropout': hp.uniform('dropout', 0, 0.5),
-    'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.1))
+    'num_layers': hp.choice('num_layers', [1, 2, 3, 4])
 }
 
 # Define the optimization function
