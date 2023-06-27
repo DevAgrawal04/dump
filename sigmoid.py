@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 
 # Define the sigmoid function
 def sigmoid(x, k, a, b):
-    return k / (1 + np.exp(a + b * x))
+    return k / (1 + np.exp(a + b * x))                                  
 
 # Define the objective function to minimize
 def objective(params, features, x, y):
