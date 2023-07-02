@@ -1,19 +1,13 @@
 import numpy as np
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF
+from sklearn.model_selection import train_test_split
 from skopt import gp_minimize
 
 # Define the sigmoid function
 def sigmoid(x, k, a, b):
     return k / (1 + np.exp(a + b * x))
 
-# Prepare the training data as numpy arrays
-features_train = np.array(features_train)
-x_train = np.array(x_train)
-y_train = np.array(y_train)
-
 # Define the objective function to minimize
-def objective(params):
+def objective(params, features, x, y):
     a_weights = params[:8]
     a_bias = params[8]
     b_weights = params[9:17]
@@ -21,24 +15,52 @@ def objective(params):
     k_weights = params[18:26]
     k_bias = params[26]
     
-    # Calculate sigmoid predictions
-    y_pred = sigmoid(x_train, np.dot(features_train, a_weights) + a_bias,
-                     np.dot(features_train, b_weights) + b_bias,
-                     np.dot(features_train, k_weights) + k_bias)
+    a_value = np.dot(features, a_weights) + a_bias
+    b_value = np.dot(features, b_weights) + b_bias
+    k_value = np.dot(features, k_weights) + k_bias
     
-    return np.mean((y_pred - y_train) ** 2)
+    y_pred = sigmoid(x, k_value, a_value, b_value)
+    
+    return np.mean((y_pred - y) ** 2)
 
-# Define the bounds for the parameters
-bounds = [(-np.inf, np.inf)] * 27  # No bounds specified
+# Split the data into training and testing sets
+x_train, x_test, y_train, y_test, features_train, features_test = train_test_split(
+    x, y, features, test_size=0.2, random_state=42
+)
 
-# Initial guess for weights and biases
-initial_params = np.ones(27)  # You can adjust the initial values as needed
+# Prepare the training data as numpy arrays
+features_train = np.array(features_train)
+x_train = np.array(x_train)
+y_train = np.array(y_train)
 
-# Use Gaussian Process Regression for optimization
-kernel = RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e2))
-gp_result = gp_minimize(objective, bounds, x0=initial_params, kernel=kernel)
+# Define the training objective function
+train_objective = lambda params: objective(params, features_train, x_train, y_train)
 
-# Get the optimized parameters
-optimized_params = gp_result.x
+# Minimize the objective function using GP optimization without bounds
+result = gp_minimize(train_objective, n_calls=100, n_random_starts=10, random_state=42)
 
-# ... Continue with the rest of the code
+# Get the optimized weights and biases
+optimized_params = result.x
+
+# Prepare the testing data as numpy arrays
+features_test = np.array(features_test)
+x_test = np.array(x_test)
+y_test = np.array(y_test)
+
+# Extract the weights and biases for a, b, and k
+a_weights = optimized_params[:8]
+a_bias = optimized_params[8]
+b_weights = optimized_params[9:17]
+b_bias = optimized_params[17]
+k_weights = optimized_params[18:26]
+k_bias = optimized_params[26]
+
+# Make predictions on the testing data
+a_value = np.dot(features_test, a_weights) + a_bias
+b_value = np.dot(features_test, b_weights) + b_bias
+k_value = np.dot(features_test, k_weights) + k_bias
+y_pred = sigmoid(x_test, k_value, a_value, b_value)
+
+# Evaluate the model
+mse = np.mean((y_pred - y_test) ** 2)
+print("Mean Squared Error:", mse)
