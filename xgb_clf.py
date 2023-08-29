@@ -5,7 +5,7 @@ from sklearn.metrics import log_loss
 from sklearn.model_selection import cross_val_score, KFold
 
 #Dataset
-X, y = #PUT DATA AND TARGET HERE
+# X, y = #PUT DATA AND TARGET HERE
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
 
 # 5 fold cv w/ accuracy metric
