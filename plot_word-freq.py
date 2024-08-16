@@ -1,7 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 
 # Sample DataFrame
@@ -33,12 +32,19 @@ word_counts_long = word_counts_long[word_counts_long['Frequency'] > 0]  # Filter
 # Step 3: Group by word and MI_Incident and sum frequencies
 word_frequencies = word_counts_long.groupby(['Word', 'MI_Incident']).sum().reset_index()
 
-# Step 4: Plot the word frequency bar chart
+# Step 4: Sum frequencies across all MI_Incident categories to get overall frequencies
+total_word_frequencies = word_frequencies.groupby('Word').sum().reset_index().sort_values(by='Frequency', ascending=False)
+
+# Step 5: Filter for the top 20 most frequent words
+top_20_words = total_word_frequencies.head(20)['Word']
+top_20_frequencies = word_frequencies[word_frequencies['Word'].isin(top_20_words)]
+
+# Step 6: Plot the word frequency bar chart for the top 20 words
 plt.figure(figsize=(14, 8))
-sns.barplot(data=word_frequencies, x='Word', y='Frequency', hue='MI_Incident')
+sns.barplot(data=top_20_frequencies, x='Word', y='Frequency', hue='MI_Incident')
 
 # Customize the plot
-plt.title('Word Frequency by MI_Incident Category')
+plt.title('Top 20 Word Frequency by MI_Incident Category')
 plt.ylabel('Frequency')
 plt.xlabel('Words')
 plt.xticks(rotation=45, ha='right')
