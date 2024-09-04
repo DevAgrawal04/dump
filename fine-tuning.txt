@@ -1,0 +1,27 @@
+When we say we are "training" or "fine-tuning" a pre-trained model like SciBERT for binary classification, we are specifically modifying certain aspects of the model to adapt it to the new task. Here's a detailed explanation of what is being modified and why:
+
+What Happens During Fine-Tuning?
+Addition of Task-Specific Layers:
+
+Classifier Layer: In your case, a linear classifier layer (or sometimes a few dense layers) is added on top of the pre-trained SciBERT model. This layer is specifically designed for the binary classification task, with outputs corresponding to the number of classes (e.g., 2 for binary classification).
+Dropout Layer: A dropout layer is often added before the classifier to help prevent overfitting by randomly deactivating neurons during training.
+Training the Entire Model vs. Just the Classifier Layer:
+
+Fine-Tuning All Layers: Typically, all layers of the pre-trained model (including the SciBERT transformer layers) are fine-tuned on the new data. This means we adjust the weights throughout the entire model, allowing it to adapt to the specific nuances of the new classification task.
+Fine-Tuning Only the Added Layers: Sometimes, only the newly added classifier layer is trained while the rest of the SciBERT model's layers are kept frozen (i.e., their weights do not change). This is usually done when data is limited or when trying to preserve the pre-trained model's language understanding.
+What Are We Modifying?
+When we fine-tune, we adjust the following:
+
+Weights of the Transformer Layers (SciBERT):
+
+These layers are pre-trained on a vast amount of scientific text, learning general language patterns and context. During fine-tuning, these weights are slightly adjusted to better suit the specific classification task (e.g., understanding the language patterns that indicate a mechanical integrity incident).
+Weights of the Classifier Layer:
+
+These weights are randomly initialized at the start of training and are specifically learned from the task-specific data during fine-tuning. The classifier layer is directly responsible for making predictions about the input data.
+Why Fine-Tuning Matters
+Adaptation to Task-Specific Data: Fine-tuning allows the model to learn task-specific patterns that were not captured during pre-training. For example, SciBERT was trained to understand general scientific language, but it wasn't specifically trained to distinguish between mechanical and non-mechanical integrity incidents in reports.
+Improving Accuracy: Fine-tuning updates the pre-trained weights, optimizing the model's performance on the new task, often resulting in significantly better predictions than using the model without task-specific fine-tuning.
+Summary of Training Modifications:
+The entire model’s weights (including those of the SciBERT transformer layers) are slightly adjusted to fit the new task better.
+The newly added layers (classifier and dropout) are trained from scratch, with their weights specifically learned from your classification dataset.
+Fine-tuning is a powerful way to leverage the general language understanding of a large pre-trained model and adapt it effectively to a specific, often much smaller, task-specific dataset.
