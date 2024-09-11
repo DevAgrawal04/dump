@@ -1,5 +1,5 @@
 # Install Captum for Integrated Gradients
-!pip install captum
+# !pip install captum
 
 import torch
 from captum.attr import IntegratedGradients
