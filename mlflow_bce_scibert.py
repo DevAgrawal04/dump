@@ -53,8 +53,8 @@ base_model = AutoModel.from_pretrained("allenai/scibert_scivocab_uncased")
 max_len = 256  # Adjust based on your text length
 
 # Split dataset into train and test sets
-X = df['Processed_Description'].values
-y = df['MI_Incident'].values
+X = df2['Processed_Description'].values
+y = df2['MI_Incident'].values
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
@@ -129,7 +129,7 @@ for epoch in range(epochs):
     print(f'Epoch {epoch + 1}/{epochs} - Training Loss: {avg_train_loss:.4f}')
     
     # Evaluate on validation/test set
-    val_loss, val_accuracy = evaluate(model, test_loader, "Test", df, log_to_mlflow=True)
+    val_loss, val_accuracy = evaluate(model, test_loader, "Test", df2, log_to_mlflow=True)
     val_losses.append(val_loss)
 
     # Log validation loss and accuracy to MLflow
@@ -151,7 +151,7 @@ plt.grid(True)
 plt.show()
 
 # Define the evaluation function with logging to MLflow
-def evaluate(model, loader, dataset_name="Test", df=None, log_to_mlflow=False):
+def evaluate(model, loader, dataset_name="Test", df2=None, log_to_mlflow=False):
     model.eval()
     total_loss = 0
     y_preds = []
@@ -189,11 +189,11 @@ def evaluate(model, loader, dataset_name="Test", df=None, log_to_mlflow=False):
         mlflow.log_metric(f"{dataset_name}_accuracy", accuracy)
 
     # Print misclassified descriptions with probabilities
-    if df is not None:
+    if df2 is not None:
         print(f'\n{dataset_name} Misclassified Samples:')
         for idx, text, pred, true, prob in misclassified_samples:
-            if idx < len(df):
-                print(f"Description: {df['Description'].iloc[idx]}")
+            if idx < len(df2):
+                print(f"Description: {df2['Description'].iloc[idx]}")
                 print(f"Text: {text}\nPredicted Label: {pred}, True Label: {true}, Probability: {prob:.4f}\n")
 
     return avg_loss, accuracy
