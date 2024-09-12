@@ -31,11 +31,18 @@ def compute_integrated_gradients(model, tokenizer, input_text, label, max_len=25
         return_tensors='pt'
     )
 
-    input_ids = inputs['input_ids'].to(device)
-    attention_mask = inputs['attention_mask'].to(device)
+    input_ids = inputs['input_ids'].to(device).long()  # Ensure the tensor is of type Long
+    attention_mask = inputs['attention_mask'].to(device).long()  # Ensure the tensor is of type Long
     
     # Generate a baseline that matches input shape, usually padded zeros or "[PAD]"
-    baseline_ids = tokenizer.encode(baseline_text, add_special_tokens=True, max_length=max_len, padding='max_length', truncation=True, return_tensors='pt').to(device)
+    baseline_ids = tokenizer.encode(
+        baseline_text, 
+        add_special_tokens=True, 
+        max_length=max_len, 
+        padding='max_length', 
+        truncation=True, 
+        return_tensors='pt'
+    ).to(device).long()  # Ensure the tensor is of type Long
 
     # Initialize Integrated Gradients object
     ig = IntegratedGradients(model)
