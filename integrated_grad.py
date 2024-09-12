@@ -1,11 +1,11 @@
-# Install Captum for Integrated Gradients if not already installed
+# Install Captum if not already installed
 !pip install captum
 
 import torch
 from captum.attr import IntegratedGradients
 import numpy as np
 
-# Function to visualize the token attributions
+# Function to visualize token attributions
 def visualize_token_attributions(input_text, attributions, tokenizer):
     tokens = tokenizer.tokenize(input_text)
     attributions = attributions.sum(dim=-1).squeeze(0).detach().cpu().numpy()
@@ -32,9 +32,9 @@ def compute_integrated_gradients(model, tokenizer, input_text, label, max_len=25
     )
 
     # Convert input IDs and attention mask to LongTensor to match model's embedding layer requirements
-    input_ids = inputs['input_ids'].to(device).long()  # Ensure input_ids are of type Long
-    attention_mask = inputs['attention_mask'].to(device).long()  # Ensure attention_mask is of type Long
-    
+    input_ids = inputs['input_ids'].to(device).type(torch.long)  # Convert input_ids to LongTensor
+    attention_mask = inputs['attention_mask'].to(device).type(torch.long)  # Convert attention_mask to LongTensor
+
     # Generate a baseline that matches input shape, usually padded zeros or "[PAD]"
     baseline_ids = tokenizer.encode(
         baseline_text,
@@ -43,15 +43,16 @@ def compute_integrated_gradients(model, tokenizer, input_text, label, max_len=25
         padding='max_length',
         truncation=True,
         return_tensors='pt'
-    ).to(device).long()  # Ensure baseline_ids are of type Long
+    ).to(device).type(torch.long)  # Convert baseline_ids to LongTensor
 
     # Initialize Integrated Gradients object
-    ig = IntegratedGradients(model)
+    ig = IntegratedGradients(forward_func)
 
     # Define a forward function for the Integrated Gradients
     def forward_func(input_ids, attention_mask):
+        # Forward pass through the model
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        return outputs.squeeze(1)  # Adjust this as per your model's output
+        return outputs.squeeze(1)  # Adjust this as per your model's output shape
 
     # Compute attributions using integrated gradients
     attributions, delta = ig.attribute(
