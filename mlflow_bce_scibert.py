@@ -4,13 +4,16 @@
 import torch
 from transformers import AutoTokenizer, AutoModel
 from torch.utils.data import DataLoader, Dataset
-from sklearn.model_selection import train_test_split, accuracy_score
+from sklearn.model_selection import train_test_split, accuracy_score, classification_report
 from torch.nn import BCEWithLogitsLoss
 from torch.optim import AdamW
 from tqdm import tqdm
 import mlflow
 import mlflow.pytorch
 import matplotlib.pyplot as plt
+
+# Enable automatic logging
+mlflow.autolog()
 
 # Custom dataset class for the incident descriptions
 class IncidentDataset(Dataset):
@@ -89,7 +92,8 @@ optimizer = AdamW(model.parameters(), lr=2e-5)
 epochs = 3
 
 # Initialize lists to store loss values
-losses = []
+train_losses = []
+val_losses = []
 
 # Start an MLflow run
 mlflow.start_run(run_name="SciBERT Training")
@@ -102,7 +106,7 @@ mlflow.log_param("epochs", epochs)
 # Training loop
 for epoch in range(epochs):
     model.train()
-    total_loss = 0
+    total_train_loss = 0
     for batch in tqdm(train_loader):
         optimizer.zero_grad()
 
@@ -112,40 +116,44 @@ for epoch in range(epochs):
 
         logits = model(input_ids=input_ids, attention_mask=attention_mask)
         loss = criterion(logits, labels)
-        total_loss += loss.item()
+        total_train_loss += loss.item()
 
         loss.backward()
-
-        # Log gradient norms to track which layers are being updated
-        for name, param in model.named_parameters():
-            if param.grad is not None:
-                grad_norm = param.grad.norm().item()
-                mlflow.log_metric(f'grad_norm_{name}', grad_norm)
-
         optimizer.step()
 
-    avg_loss = total_loss / len(train_loader)
-    losses.append(avg_loss)
+    avg_train_loss = total_train_loss / len(train_loader)
+    train_losses.append(avg_train_loss)
 
-    # Log metrics to MLflow
-    mlflow.log_metric("avg_training_loss", avg_loss, step=epoch)
-    print(f'Epoch {epoch + 1}/{epochs} - Loss: {avg_loss:.4f}')
+    # Log training loss to MLflow
+    mlflow.log_metric("avg_training_loss", avg_train_loss, step=epoch)
+    print(f'Epoch {epoch + 1}/{epochs} - Training Loss: {avg_train_loss:.4f}')
+    
+    # Evaluate on validation/test set
+    val_loss, val_accuracy = evaluate(model, test_loader, "Test", df, log_to_mlflow=True)
+    val_losses.append(val_loss)
+
+    # Log validation loss and accuracy to MLflow
+    mlflow.log_metric("val_loss", val_loss, step=epoch)
+    mlflow.log_metric("val_accuracy", val_accuracy, step=epoch)
 
 # End the MLflow run
 mlflow.end_run()
 
-# Plotting training loss vs. epochs
+# Plotting training and validation loss vs. epochs
 plt.figure(figsize=(10, 6))
-plt.plot(range(1, epochs + 1), losses, marker='o', linestyle='-')
-plt.title('Training Loss vs. Epochs')
+plt.plot(range(1, epochs + 1), train_losses, marker='o', linestyle='-', label='Training Loss')
+plt.plot(range(1, epochs + 1), val_losses, marker='o', linestyle='-', label='Validation Loss')
+plt.title('Training and Validation Loss vs. Epochs')
 plt.xlabel('Epochs')
-plt.ylabel('Average Training Loss')
+plt.ylabel('Loss')
+plt.legend()
 plt.grid(True)
 plt.show()
 
-# Define the evaluation function for unique misclassification checking
-def evaluate(model, loader, dataset_name="Test", df=None):
+# Define the evaluation function with logging to MLflow
+def evaluate(model, loader, dataset_name="Test", df=None, log_to_mlflow=False):
     model.eval()
+    total_loss = 0
     y_preds = []
     y_true = []
     misclassified_samples = []
@@ -157,6 +165,9 @@ def evaluate(model, loader, dataset_name="Test", df=None):
             labels = batch['labels'].cpu().numpy()
 
             logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            loss = criterion(logits, labels)
+            total_loss += loss.item()
+
             probs = torch.sigmoid(logits).cpu().numpy().flatten()
             preds = (probs > 0.5).astype(int)
 
@@ -169,11 +180,13 @@ def evaluate(model, loader, dataset_name="Test", df=None):
                     global_idx = batch_idx * loader.batch_size + i
                     misclassified_samples.append((global_idx, batch['text'][i], pred, true, prob))
 
-    # Print classification report
+    avg_loss = total_loss / len(loader)
     accuracy = accuracy_score(y_true, y_preds)
     print(f'{dataset_name} Accuracy: {accuracy * 100:.2f}%')
-    print(f'{dataset_name} Classification Report:\n')
-    print(classification_report(y_true, y_preds, target_names=['Non-MI', 'MI']))
+
+    # Log evaluation metrics to MLflow
+    if log_to_mlflow:
+        mlflow.log_metric(f"{dataset_name}_accuracy", accuracy)
 
     # Print misclassified descriptions with probabilities
     if df is not None:
@@ -183,9 +196,7 @@ def evaluate(model, loader, dataset_name="Test", df=None):
                 print(f"Description: {df['Description'].iloc[idx]}")
                 print(f"Text: {text}\nPredicted Label: {pred}, True Label: {true}, Probability: {prob:.4f}\n")
 
-
-evaluate(model, train_loader, "Train", df)
-evaluate(model, test_loader, "Test", df)
+    return avg_loss, accuracy
 
 # Save the trained model and tokenizer
 model.bert.save_pretrained('scibert_cls_model')
