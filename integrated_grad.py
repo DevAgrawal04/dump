@@ -1,5 +1,5 @@
 # Install Captum if not already installed
-!pip install captum
+# !pip install captum 
 
 import torch
 from captum.attr import IntegratedGradients
